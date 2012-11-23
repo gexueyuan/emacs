@@ -752,7 +752,7 @@ auto-mode-alist))
   
 
 ;; Enable EDE (Project Management) features
-(global-ede-mode 1)
+(global-ede-mode t)
 
 ;; Enable EDE for a pre-existing C++ project
 ;; (ede-cpp-root-project "NAME" :file "~/myproject/Makefile")
@@ -762,7 +762,7 @@ auto-mode-alist))
 ;; Select one of the following:
 
 ;; * This enables the database and idle reparse engines
-(semantic-load-enable-minimum-features)
+;;(semantic-load-enable-minimum-features)
 
 ;; * This enables some tools useful for coding, such as summary mode
 ;;   imenu support, and the semantic navigator
@@ -770,7 +770,10 @@ auto-mode-alist))
 
 ;; * This enables even more coding tools such as intellisense mode
 ;;   decoration mode, and stickyfunc mode (plus regular code helpers)
-;; (semantic-load-enable-gaudy-code-helpers)
+;;(semantic-load-enable-gaudy-code-helpers)
+(semantic-load-enable-excessive-code-helpers)
+
+(semantic-load-enable-semantic-debugging-helpers)
 
 ;; * This enables the use of Exuberent ctags if you have it installed.
 ;;   If you use C++ templates or boost, you should NOT enable it.
@@ -783,6 +786,49 @@ auto-mode-alist))
 
 ;; Enable SRecode (Template management) minor-mode.
 ;; (global-srecode-minor-mode 1)
+(require 'semantic-tag-folding nil 'noerror)
+(global-semantic-tag-folding-mode 1)
+
+(enable-visual-studio-bookmarks)
+
+;; (setq semanticdb-project-roots (list (expand-file-name "/")))
+(defconst cedet-user-include-dirs
+  (list ".." "../include" "../inc" "../common" "../public"
+        "../.." "../../include" "../../inc" "../../common" "../../public" "../../../include"))
+(defconst cedet-win32-include-dirs
+  (list "C:/MinGW/include"
+        "C:/MinGW/include/c++/3.4.5"
+        "C:/MinGW/include/c++/3.4.5/mingw32"
+        "C:/MinGW/include/c++/3.4.5/backward"
+        "C:/MinGW/lib/gcc/mingw32/3.4.5/include"
+        "C:/Program Files/Microsoft Visual Studio/VC98/MFC/Include"))
+(require 'semantic-c nil 'noerror)
+(let ((include-dirs cedet-user-include-dirs))
+  (when (eq system-type 'windows-nt)
+    (setq include-dirs (append include-dirs cedet-win32-include-dirs)))
+  (mapc (lambda (dir)
+          (semantic-add-system-include dir 'c++-mode)
+          (semantic-add-system-include dir 'c-mode))
+        include-dirs))
+
+(global-set-key [f12] 'semantic-ia-fast-jump)
+
+(global-set-key [S-f12]
+                (lambda ()
+                  (interactive)
+                  (if (ring-empty-p (oref semantic-mru-bookmark-ring ring))
+                      (error "Semantic Bookmark ring is currently empty"))
+                  (let* ((ring (oref semantic-mru-bookmark-ring ring))
+                         (alist (semantic-mrub-ring-to-assoc-list ring))
+                         (first (cdr (car alist))))
+                    (if (semantic-equivalent-tag-p (oref first tag)
+                                                   (semantic-current-tag))
+                        (setq first (cdr (car (cdr alist)))))
+                    (semantic-mrub-switch-tags first))))
+
+(define-key c-mode-base-map [M-S-f12] 'semantic-analyze-proto-impl-toggle)
+
+(define-key c-mode-base-map (kbd "M-n") 'semantic-ia-complete-symbol-menu)
 ;;----------------------            END cedet                ---------------------
 
 
